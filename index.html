@@ -105,7 +105,7 @@
 </head>
 <body>
 <canvas id="world"></canvas>
-<div class="plaque"><img id="logo" alt="L.I.V.E." onerror="this.parentNode.remove()"></div>
+<div class="plaque"><a href="https://prometna.net/visja-sola/" target="_blank" rel="noopener" title="Odpri spletno stran šole" style="display:flex"><img id="logo" alt="L.I.V.E." onerror="this.closest('.plaque').remove()"></a></div>
 <div class="tools"><button class="tb" id="snd" title="Zvok">♪</button><button class="tb" id="fs" title="Celozaslonski način (F)">⛶</button></div>
 <div id="hud" class="px">Globina<br><b id="hd">0 m</b><br><small id="hr"></small></div>
 <div id="ui"></div>
@@ -416,7 +416,26 @@ addEventListener('keydown',e=>{
   if(!G&&e.key==='Enter'&&selCat&&a&&a.id==='nm'){ startGame(selCat); return; }
   const inp=$('#ans')||$('#nm'); if(inp&&a!==inp&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey) inp.focus();
 });
-$('#clr').onclick=()=>{ if(confirm('Izbrišem celotno lestvico?')){ highs=[]; saveHighs(); if(!G) showStart(); } };
+const RESET_CODE='L.I.V.E';   // koda za ponastavitev lestvice
+$('#clr').onclick=()=>{
+  if($('#codeModal')) return;
+  const m=document.createElement('div'); m.id='codeModal';
+  m.style.cssText='position:fixed;inset:0;z-index:50;background:rgba(2,6,15,.7);display:flex;align-items:center;justify-content:center';
+  m.innerHTML=`<div class="px" style="padding:28px 30px;width:min(440px,92vw);text-align:center"><span class="chip tagc">Ponastavitev lestvice</span>
+    <div style="font-size:26px;margin:6px 0 14px">Vpiši kodo za izbris lestvice</div>
+    <input id="codeIn" class="ans-in" style="font-size:30px" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Koda">
+    <div id="codeMsg" style="min-height:28px;margin-top:10px;font-size:22px;color:#ff7a9c"></div>
+    <button class="btn" id="codeOk" style="margin-right:10px">Potrdi</button><button class="btn" id="codeNo" style="background:#2b4560;color:#e6f6ff;box-shadow:0 5px 0 #14263a">Prekliči</button></div>`;
+  document.body.appendChild(m);
+  const inp=$('#codeIn'); inp.focus();
+  const close=()=>m.remove();
+  const ok=()=>{ if(inp.value.trim().toLowerCase()===RESET_CODE.toLowerCase()){ highs=[]; saveHighs(); close(); if(!G) showStart(); }
+    else { $('#codeMsg').textContent='Napačna koda'; inp.value=''; inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); inp.focus(); } };
+  $('#codeOk').onclick=ok; $('#codeNo').onclick=close;
+  inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') ok(); if(e.key==='Escape') close(); };
+  m.addEventListener('keydown',e=>e.stopPropagation());
+  m.onclick=e=>{ if(e.target===m) close(); };
+};
 document.addEventListener('visibilitychange',()=>{ if(!actx) return; if(document.hidden) actx.suspend(); else actx.resume(); });
 (document.fonts&&document.fonts.ready||Promise.resolve()).then(()=>{});
 showStart();
