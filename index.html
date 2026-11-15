@@ -44,6 +44,8 @@
   .name { width:100%; font-family:inherit; font-size:31px; padding:12px 16px; text-align:center; color:var(--ink); background:#08122a; border:3px solid #27507a; outline:none; letter-spacing:.02em; }
   .name:focus { border-color:var(--cy); box-shadow:0 0 14px rgba(56,225,255,.5); }
   .name::placeholder { color:#4d6d8c; }
+  .hintTog { display:block; margin:8px auto 0; font-family:inherit; font-size:20px; color:var(--ink); background:#12244f; border:2px solid #27507a; padding:4px 16px; cursor:pointer; }
+  .hintTog:hover { border-color:var(--cy); }
   .catgrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0; }
   .cat { display:flex; align-items:center; gap:10px; text-align:left; padding:10px 12px; font-family:inherit; color:var(--ink); cursor:pointer; min-height:64px; transition:transform .08s; }
   .cat:hover { transform:translateY(-3px); border-color:#fff; }
@@ -312,6 +314,7 @@ function countUp(el,to,ms,prefix='',suffix=''){ const t0=performance.now(); cons
 
 /* ============ igra ============ */
 let G=null, timers=[], tickRaf=0, lastName='', selCat=null;
+let hintsOn=true; try{ hintsOn=localStorage.getItem('kd_hints')!=='0'; }catch(e){}   // igralec izbere, ali želi namige
 const clearTimers=()=>{ timers.forEach(t=>{clearTimeout(t);clearInterval(t);}); timers=[]; cancelAnimationFrame(tickRaf); };
 const later=(fn,ms)=>{ const t=setTimeout(fn,ms); timers.push(t); return t; };
 const lbRows=(rank=0,n=6)=>highs.slice(0,n).map((h,i)=>`<li class="${rank===i+1?'me':''}"><span class="rk">${i+1}.</span><span class="n">${esc(h.name)}</span><span class="d">${h.total*10} m</span></li>`).join('');
@@ -324,9 +327,11 @@ function showStart(){
      <div class="sub2">5 vprašanj · 25 sekund · redkejši odgovori potonijo globlje</div></div>
    <div class="lb px"><span class="chip tagc">Lestvica</span><h3>&nbsp;</h3>${highs.length?'<ol>'+lbRows(0,7)+'</ol>':'<div class="empty">Lestvica je še prazna.<br>Bodi prvi!</div>'}</div>
    <div class="dock"><input id="nm" class="name" maxlength="14" placeholder="Tvoje ime" value="${esc(lastName)}" autocomplete="off">
+     <button id="hintTog" class="hintTog" type="button">${hintsOn?'Namigi: vklopljeni ✔':'Namigi: izklopljeni'}</button>
      <div class="catgrid">${CATEGORIES.map(c=>`<button class="cat px ${selCat===c.id?'sel':''}" data-id="${c.id}"><img class="ic" src="${iconUrl(c.id)}" alt=""><div><div class="nm">${esc(c.ime)}</div><small>${catBest(c.ime)?'Rekord '+catBest(c.ime)*10+' m':'Še nihče'}</small></div></button>`).join('')}</div>
      <button id="go" class="bigbtn px" ${selCat?'':'disabled'}>${selCat?'▼ Začni potop ▼':'▼ Izberi smer ▼'}</button></div>`;
   ui.querySelectorAll('.cat').forEach(b=>b.onclick=()=>{ lastName=$('#nm').value; selCat=b.dataset.id; sfx.tick(); showStart(); setTimeout(()=>$('#go').focus(),0); });
+  $('#hintTog').onclick=()=>{ hintsOn=!hintsOn; try{ localStorage.setItem('kd_hints',hintsOn?'1':'0'); }catch(e){} $('#hintTog').textContent=hintsOn?'Namigi: vklopljeni ✔':'Namigi: izklopljeni'; sfx.tick(); };
   $('#go').onclick=()=>selCat&&startGame(selCat);
   $('#nm').focus();
 }
@@ -362,7 +367,7 @@ function askQuestion(){
   sub.onclick=()=>end(false); inp.oninput=check; inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); end(false); } };
   const t0=performance.now(); let last=-1;
   const tick=()=>{ if(done) return; const left=Math.max(0,CFG.answerSec-(performance.now()-t0)/1000), s=Math.ceil(left);
-    if(!hinted && CFG.answerSec-left>=CFG.hintAfterSec){ hinted=true; const easyA=q.answers.filter(a=>(a.raw||a.pts)<=25&&a.label.length>=4); const pick=easyA[Math.floor(Math.random()*easyA.length)]; const h=$('#hint'); if(pick&&h){ h.style.color='#ffd86b'; h.textContent='Namig: ena od besed se začne z »'+pick.label.slice(0,3)+'…«'; } } if(s!==last){ last=s; const seg=$('#seg'); if(!seg) return; [...seg.children].forEach((c,i)=>c.classList.toggle('on',i<s)); seg.classList.toggle('low',s<=5); $('#secs').textContent=s+' s'; if(s<=5&&s>0) sfx.tick(); }
+    if(hintsOn && !hinted && CFG.answerSec-left>=CFG.hintAfterSec){ hinted=true; const easyA=q.answers.filter(a=>(a.raw||a.pts)<=25&&a.label.length>=4); const pick=easyA[Math.floor(Math.random()*easyA.length)]; const h=$('#hint'); if(pick&&h){ h.style.cssText='color:#ffd86b;font-size:30px;line-height:1.2;margin-top:16px;padding:10px 14px;background:#0f2147;border-left:5px solid #ffd86b'; h.textContent='Namig: ena od besed se začne z »'+pick.label.slice(0,3)+'…«'; } } if(s!==last){ last=s; const seg=$('#seg'); if(!seg) return; [...seg.children].forEach((c,i)=>c.classList.toggle('on',i<s)); seg.classList.toggle('low',s<=5); $('#secs').textContent=s+' s'; if(s<=5&&s>0) sfx.tick(); }
     if(left<=0) end(true); else tickRaf=requestAnimationFrame(tick); };
   tick();
 }
